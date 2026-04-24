@@ -1390,8 +1390,7 @@ if (!process.env.TOKEN) {
 }
 
 if (!process.env.DATABASE_URL) {
-  console.error("Saknar DATABASE_URL i miljövariabler.");
-  process.exit(1);
+  console.log("Ingen databas – fortsätter utan DB");
 }
 
 ensureSchema()
