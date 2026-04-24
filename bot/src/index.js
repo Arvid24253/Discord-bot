@@ -908,7 +908,68 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     if (!interaction.isChatInputCommand()) return;
+     if (interaction.commandName === "doneticket") {
+       const channel = interaction.channel;
 
+       if (!channel || !channel.deletable) {
+         return interaction.reply({
+           content: "Jag kan inte stänga den här ticketen.",
+           ephemeral: true,
+         });
+       }
+
+       const closer = interaction.user;
+
+       // Försök hitta vem som öppnade ticketen
+       // Rekommenderat: ticket creator ID sparas i channel.topic
+       let openerId = channel.topic?.match(/\d{17,20}/)?.[0];
+
+       let opener = null;
+       if (openerId) {
+         try {
+           opener = await client.users.fetch(openerId);
+         } catch {}
+       }
+
+       await interaction.reply({
+         content: "✅ Ticketen markeras som klar och stängs om 5 sekunder.",
+         ephemeral: true,
+       });
+
+       const messageToCloser =
+         `✅ **Ticket complete**\n\n` +
+         `Du stängde ticketen: **#${channel.name}**\n` +
+         `Tack för hjälpen.`;
+
+       const messageToOpener =
+         `✅ **Ticket complete**\n\n` +
+         `Din ticket **#${channel.name}** har blivit färdig och stängd.\n` +
+         `Stängd av: **${closer.username}**`;
+
+       try {
+         await closer.send(messageToCloser);
+       } catch {
+         console.log("Kunde inte skicka DM till personen som stängde ticketen.");
+       }
+
+       if (opener) {
+         try {
+           await opener.send(messageToOpener);
+         } catch {
+           console.log("Kunde inte skicka DM till personen som öppnade ticketen.");
+         }
+       }
+
+       setTimeout(async () => {
+         try {
+           await channel.delete(`Ticket completed by ${closer.tag}`);
+         } catch (err) {
+           console.error("Kunde inte ta bort ticket-kanalen:", err);
+         }
+       }, 5000);
+
+       return;
+     }
     let member = null;
 
     if (interaction.guild) {
