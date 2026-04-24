@@ -989,7 +989,7 @@ client.on("interactionCreate", async (interaction) => {
       if (interaction.deferred && !interaction.replied) {
         return interaction.editReply({
           content: "Ett oväntat fel inträffade. Försök igen om en stund.",
-          }).catch(() => {});
+          });
       }
       if (!interaction.replied && !interaction.deferred) {
         return interaction.reply({
