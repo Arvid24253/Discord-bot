@@ -352,7 +352,7 @@ function isAdminAction(action) {
 // ---------- Bot ----------
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`Inloggad som ${client.user.tag}`);
   client.user.setPresence({
     activities: [
