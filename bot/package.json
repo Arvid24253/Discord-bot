@@ -1,0 +1,17 @@
+{
+  "name": "discord-swap-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Discord bot boilerplate for /setswap and /swap slash commands",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "register": "node src/register-commands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "pg": "^8.20.0",
+    "qrcode": "^1.5.4"
+  }
+}
