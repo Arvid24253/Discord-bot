@@ -948,16 +948,7 @@ client.on("interactionCreate", async (interaction) => {
     console.error("Member fetch failed:", err);
   }
 
-  const hasRole = memberHasRole(member, REQUIRED_ROLE_ID);
-
-  // Tillåt crypto för alla
-  if (interaction.commandName !== "crypto") {
-    if (!hasRole) {
-      return interaction.reply({
-        content: "Du har inte behörighet att använda detta kommando.",
-        ephemeral: true,
-      });
-    }
+  
   }
   if (interaction.commandName === "crypto") {
     return handleCryptoCommand(interaction);
