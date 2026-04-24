@@ -385,7 +385,6 @@ async function sendConfirmPrompt(interaction, { prompt, customId }) {
 }
 
 
-}
 
 async function handleShow(interaction, svc) {
   const target = interaction.options.getUser("user") ?? interaction.user;
