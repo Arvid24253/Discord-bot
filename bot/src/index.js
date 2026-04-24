@@ -384,10 +384,7 @@ async function sendConfirmPrompt(interaction, { prompt, customId }) {
   });
 }
 
-function memberHasRole(member, roleId) {
-  if (!member) return false;
-  if (Array.isArray(member.roles)) return member.roles.includes(roleId);
-  return member.roles?.cache?.has(roleId) ?? false;
+
 }
 
 async function handleShow(interaction, svc) {
@@ -935,17 +932,24 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   if (!interaction.isChatInputCommand()) return;
-  // 🔒 Tillåt /crypto för alla, resten kräver roll
+  const REQUIRED_ROLE_ID = "1459902353145598105";
+
+  let member;
   try {
-    const guild = interaction.guild;
-    if (guild) {
-      member =
-        interaction.member && interaction.member.roles?.cache
-          ? interaction.member
-          : await guild.members.fetch(interaction.user.id);
-    }
+    member = interaction.member?.roles?.cache
+      ? interaction.member
+      : await interaction.guild.members.fetch(interaction.user.id);
   } catch (err) {
-    console.error("Member fetch failed:", err);
+    console.error("Kunde inte hämta medlem:", err);
+  }
+
+  const hasRole = member?.roles?.cache?.has(REQUIRED_ROLE_ID);
+
+  if (!hasRole) {
+    return interaction.reply({
+      content: "Du har inte behörighet att använda detta kommando.",
+      ephemeral: true,
+    });
   }
 
   
@@ -975,15 +979,7 @@ client.on("interactionCreate", async (interaction) => {
     } catch (err) {
       console.error("Member fetch failed:", err);
     }
-    const isAdmin = memberHasRole(member, ADMIN_ROLE_ID);
-    const isAdminCmd =
-      interaction.commandName === "cryptoswaplist" ||
-      interaction.commandName === "cryptoswapremove";
-    const requiredId = isAdminCmd ? ADMIN_ROLE_ID : REQUIRED_ROLE_ID;
-    if (!memberHasRole(member, requiredId) && !isAdmin) {
-      return interaction.reply({
-        content: "Du har inte behörighet att använda detta kommando.",
-        ephemeral: true,
+    
       });
     }
 
@@ -1019,10 +1015,7 @@ client.on("interactionCreate", async (interaction) => {
     } catch (err) {
       console.error("Member fetch failed:", err);
     }
-    if (!memberHasRole(member, REQUIRED_ROLE_ID)) {
-      return interaction.reply({
-        content: "Endast växlare kan använda detta kommando.",
-        ephemeral: true,
+    
       });
     }
 
@@ -1090,10 +1083,7 @@ client.on("interactionCreate", async (interaction) => {
     } catch (err) {
       console.error("Member fetch failed:", err);
     }
-    if (!memberHasRole(member, ADMIN_ROLE_ID)) {
-      return interaction.reply({
-        content: "Endast administratörer kan använda detta kommando.",
-        ephemeral: true,
+    
       });
     }
 
@@ -1201,10 +1191,7 @@ client.on("interactionCreate", async (interaction) => {
     } catch (err) {
       console.error("Member fetch failed:", err);
     }
-    if (!memberHasRole(member, ADMIN_ROLE_ID)) {
-      return interaction.reply({
-        content: "Endast administratörer kan använda detta kommando.",
-        ephemeral: true,
+    
       });
     }
 
@@ -1244,9 +1231,7 @@ client.on("interactionCreate", async (interaction) => {
     } catch (err) {
       console.error("Member fetch failed:", err);
     }
-    if (!memberHasRole(member, REQUIRED_ROLE_ID)) {
-      return interaction.reply({
-        content: "Endast växlare kan använda detta kommando.",
+    
         ephemeral: true,
       });
     }
@@ -1337,12 +1322,7 @@ client.on("interactionCreate", async (interaction) => {
     console.error("Member fetch failed:", err);
   }
 
-  const hasRequired = memberHasRole(member, requiredRoleId);
-  const isAdmin = memberHasRole(member, ADMIN_ROLE_ID);
-  if (!hasRequired && !isAdmin) {
-    return interaction.reply({
-      content: "Du har inte behörighet att använda detta kommando.",
-      ephemeral: true,
+  
     });
   }
 
