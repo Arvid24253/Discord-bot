@@ -169,6 +169,10 @@ const commands = [
     .setDescription("Bekräfta crypto"),
 
   new SlashCommandBuilder()
+  .setName("doneticket")
+  .setDescription("Stäng ticketen och meddela användarna"),
+
+  new SlashCommandBuilder()
     .setName("historik")
     .setDescription("Visa historik")
     .addUserOption((opt) =>
