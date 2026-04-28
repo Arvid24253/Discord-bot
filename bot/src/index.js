@@ -42,7 +42,7 @@ const PAYPAL_BLUE = 0x003087;
 const FEE_PERCENT = 8;
 
 const REQUIRED_ROLE_ID = "1459902353145598105";
-const ADMIN_ROLE_ID = "1459901934080229593";
+const ADMIN_ROLE_ID = "1498733035548311796";
 
 if (!process.env.TOKEN) {
   console.error("Saknar TOKEN i miljövariabler.");
