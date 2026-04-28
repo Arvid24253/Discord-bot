@@ -165,6 +165,7 @@ function toSwishPayee(nummer) {
 
 async function generateSwishQr({ account, amount, message }) {
   const payee = toSwishPayee(account);
+
   const body = {
     payee: { value: payee, editable: false },
     size: 512,
@@ -195,6 +196,7 @@ async function generateSwishQr({ account, amount, message }) {
 
 function normalizeSwishNumber(input) {
   if (!input) return null;
+
   const cleaned = input.replace(/[\s\-()]/g, "");
 
   let m = cleaned.match(/^\+467(\d{8})$/);
@@ -214,6 +216,7 @@ function normalizeSwishNumber(input) {
 
 function normalizePaypalAccount(input) {
   if (!input) return null;
+
   const trimmed = input.trim();
 
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
@@ -253,6 +256,7 @@ function paypalPayUrl(account, amount) {
 
 async function generatePaypalQr({ account, amount }) {
   const url = paypalPayUrl(account, amount);
+
   return QRCode.toBuffer(url, {
     errorCorrectionLevel: "M",
     margin: 2,
@@ -292,6 +296,7 @@ function buildCryptoUri(coinKey, address, amount) {
 
 async function generateCryptoQr({ coinKey, address, amount }) {
   const uri = buildCryptoUri(coinKey, address, amount);
+
   return QRCode.toBuffer(uri, {
     errorCorrectionLevel: "M",
     margin: 2,
@@ -908,68 +913,7 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     if (!interaction.isChatInputCommand()) return;
-     if (interaction.commandName === "doneticket") {
-       const channel = interaction.channel;
 
-       if (!channel || !channel.deletable) {
-         return interaction.reply({
-           content: "Jag kan inte stänga den här ticketen.",
-           ephemeral: true,
-         });
-       }
-
-       const closer = interaction.user;
-
-       // Försök hitta vem som öppnade ticketen
-       // Rekommenderat: ticket creator ID sparas i channel.topic
-       let openerId = channel.topic?.match(/\d{17,20}/)?.[0];
-
-       let opener = null;
-       if (openerId) {
-         try {
-           opener = await client.users.fetch(openerId);
-         } catch {}
-       }
-
-       await interaction.reply({
-         content: "✅ Ticketen markeras som klar och stängs om 5 sekunder.",
-         ephemeral: true,
-       });
-
-       const messageToCloser =
-         `✅ **Ticket complete**\n\n` +
-         `Du stängde ticketen: **#${channel.name}**\n` +
-         `Tack för hjälpen.`;
-
-       const messageToOpener =
-         `✅ **Ticket complete**\n\n` +
-         `Din ticket **#${channel.name}** har blivit färdig och stängd.\n` +
-         `Stängd av: **${closer.username}**`;
-
-       try {
-         await closer.send(messageToCloser);
-       } catch {
-         console.log("Kunde inte skicka DM till personen som stängde ticketen.");
-       }
-
-       if (opener) {
-         try {
-           await opener.send(messageToOpener);
-         } catch {
-           console.log("Kunde inte skicka DM till personen som öppnade ticketen.");
-         }
-       }
-
-       setTimeout(async () => {
-         try {
-           await channel.delete(`Ticket completed by ${closer.tag}`);
-         } catch (err) {
-           console.error("Kunde inte ta bort ticket-kanalen:", err);
-         }
-       }, 5000);
-
-       return;
-     }
     let member = null;
 
     if (interaction.guild) {
@@ -987,6 +931,61 @@ client.on("interactionCreate", async (interaction) => {
         content: "Du har inte behörighet att använda detta kommando.",
         ephemeral: true,
       });
+    }
+
+    if (interaction.commandName === "doneticket") {
+      const channel = interaction.channel;
+
+      if (!channel || !channel.deletable) {
+        return interaction.reply({
+          content: "Jag kan inte stänga den här ticketen.",
+          ephemeral: true,
+        });
+      }
+
+      const closer = interaction.user;
+      const openerId = channel.topic?.match(/\d{17,20}/)?.[0];
+
+      let opener = null;
+
+      if (openerId) {
+        try {
+          opener = await client.users.fetch(openerId);
+        } catch {}
+      }
+
+      await interaction.reply({
+        content: "✅ Ticketen markeras som klar och stängs om 5 sekunder.",
+        ephemeral: true,
+      });
+
+      try {
+        await closer.send(
+          `✅ **Ticket complete**\n\nDu stängde ticketen: **#${channel.name}**`
+        );
+      } catch {
+        console.log("Kunde inte skicka DM till personen som stängde ticketen.");
+      }
+
+      if (opener) {
+        try {
+          await opener.send(
+            `✅ **Ticket complete**\n\nDin ticket **#${channel.name}** har blivit färdig och stängd.\nStängd av: **${closer.username}**`
+          );
+        } catch {
+          console.log("Kunde inte skicka DM till personen som öppnade ticketen.");
+        }
+      }
+
+      setTimeout(async () => {
+        try {
+          await channel.delete(`Ticket completed by ${closer.tag}`);
+        } catch (err) {
+          console.error("Kunde inte ta bort ticket-kanalen:", err);
+        }
+      }, 5000);
+
+      return;
     }
 
     if (interaction.commandName === "crypto") {
