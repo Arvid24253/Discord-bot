@@ -958,7 +958,7 @@ client.on("interactionCreate", async (interaction) => {
     ) {
       const embed = new EmbedBuilder()
         .setColor(SWISH_PINK)
-        .setTitle("<:Swish1:1499092938418950234> Swish Ticket")
+        .setTitle("<:Swish1: 1499092938418950234> Swish Ticket")
         .setDescription(
           "Klicka på knappen nedan för att skapa en Swish-ticket.\n\nDu kommer få fylla i:\n• Namn\n• Telefonnummer\n• Belopp"
         )
@@ -980,7 +980,7 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.commandName === "setuppaypalticket") {
       const embed = new EmbedBuilder()
         .setColor(PAYPAL_BLUE)
-        .setTitle("<:Paypal:1499092393595637992> PayPal Ticket")
+        .setTitle("<:Paypal: 1499092393595637992> PayPal Ticket")
         .setDescription(
           "Klicka på knappen nedan för att skapa en PayPal-ticket.\n\nDu kommer få fylla i:\n• Namn\n• PayPal-länk\n• Belopp"
         )
