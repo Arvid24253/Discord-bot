@@ -91,8 +91,16 @@ const commands = [
   }),
 
   new SlashCommandBuilder()
+    .setName("setupswishticket")
+    .setDescription("Skickar panelen för Swish tickets"),
+
+  new SlashCommandBuilder()
     .setName("swishticket")
     .setDescription("Skicka panel för Swish tickets"),
+
+  new SlashCommandBuilder()
+  .setName("setuppaypalticket")
+  .setDescription("Skickar panelen för PayPal tickets"),
 
   new SlashCommandBuilder()
     .setName("crypto")
@@ -201,9 +209,7 @@ const commands = [
       .addNumberOption((opt) =>
         opt
           .setName("belopp")
-          .setDescription(
-            name === "doneswish" ? "Belopp i SEK" : "Belopp i USD"
-          )
+          .setDescription(name === "doneswish" ? "Belopp i SEK" : "Belopp i USD")
           .setMinValue(0)
           .setRequired(true)
       )
@@ -227,10 +233,7 @@ async function main() {
   const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
   await rest.put(
-    Routes.applicationGuildCommands(
-      process.env.CLIENT_ID,
-      process.env.GUILD_ID
-    ),
+    Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
     { body: commands }
   );
 

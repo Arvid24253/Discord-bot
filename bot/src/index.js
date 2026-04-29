@@ -99,13 +99,8 @@ async function ensureSchema() {
     )
   `);
 
-  await pool.query(
-    `CREATE INDEX IF NOT EXISTS trades_exchanger_idx ON trades(exchanger_id)`
-  );
-
-  await pool.query(
-    `CREATE INDEX IF NOT EXISTS trades_customer_idx ON trades(customer_id)`
-  );
+  await pool.query(`CREATE INDEX IF NOT EXISTS trades_exchanger_idx ON trades(exchanger_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS trades_customer_idx ON trades(customer_id)`);
 }
 
 async function logTrade({ service, exchangerId, customerId, amount, unit, note }) {
@@ -113,14 +108,7 @@ async function logTrade({ service, exchangerId, customerId, amount, unit, note }
     await pool.query(
       `INSERT INTO trades (service, exchanger_id, customer_id, amount, unit, note)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        service,
-        exchangerId,
-        customerId ?? null,
-        amount ?? null,
-        unit ?? null,
-        note ?? null,
-      ]
+      [service, exchangerId, customerId ?? null, amount ?? null, unit ?? null, note ?? null]
     );
   } catch (err) {
     console.error("Kunde inte logga affär:", err);
@@ -182,14 +170,11 @@ async function generateSwishQr({ account, amount, message }) {
   if (amount != null) body.amount = { value: amount, editable: false };
   if (message) body.message = { value: message, editable: true };
 
-  const res = await fetch(
-    "https://mpc.getswish.net/qrg-swish/api/v1/prefilled",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }
-  );
+  const res = await fetch("https://mpc.getswish.net/qrg-swish/api/v1/prefilled", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -201,7 +186,6 @@ async function generateSwishQr({ account, amount, message }) {
 
 function normalizeSwishNumber(input) {
   if (!input) return null;
-
   const cleaned = input.replace(/[\s\-()]/g, "");
 
   let m = cleaned.match(/^\+467(\d{8})$/);
@@ -221,7 +205,6 @@ function normalizeSwishNumber(input) {
 
 function normalizePaypalAccount(input) {
   if (!input) return null;
-
   const trimmed = input.trim();
 
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
@@ -251,9 +234,7 @@ function paypalDisplay(account) {
 function paypalPayUrl(account, amount) {
   if (account.startsWith("@")) {
     const handle = account.slice(1);
-    return amount != null
-      ? `https://paypal.me/${handle}/${amount}`
-      : `https://paypal.me/${handle}`;
+    return amount != null ? `https://paypal.me/${handle}/${amount}` : `https://paypal.me/${handle}`;
   }
 
   return `mailto:${account}`;
@@ -379,7 +360,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
-client.once("clientReady", () => {
+client.once("ready", () => {
   console.log(`Inloggad som ${client.user.tag}`);
 
   client.user.setPresence({
@@ -420,9 +401,7 @@ async function sendConfirmPrompt(interaction, { prompt, customId }) {
 async function handleShow(interaction, svc) {
   const target = interaction.options.getUser("user") ?? interaction.user;
   const amount = svc.showAmount ? interaction.options.getNumber("belopp") : null;
-  const message = svc.showMessage
-    ? interaction.options.getString("meddelande")
-    : null;
+  const message = svc.showMessage ? interaction.options.getString("meddelande") : null;
 
   const isSelf = target.id === interaction.user.id;
   const account = await getAccount(svc.key, target.id);
@@ -430,7 +409,7 @@ async function handleShow(interaction, svc) {
   if (!account) {
     return interaction.reply({
       content: isSelf
-        ? `Du har inget registrerat ${svc.label}-${svc.accountWordSv}. Använd /set${svc.key}swap för att lägga till ${svc.accountWordSvIndef}.`
+        ? `Du har inget registrerat ${svc.label}-${svc.accountWordSv}.`
         : `${target.username} har inget registrerat ${svc.label}-${svc.accountWordSv}.`,
       ephemeral: true,
     });
@@ -513,14 +492,11 @@ async function handleSet(interaction, svc, isAdmin) {
   }
 
   const targetId = settingForOther ? targetUserOpt.id : userId;
-  const targetLabel = settingForOther ? targetUserOpt.username : "Du";
-
   const existing = await getAccount(svc.key, targetId);
+
   if (existing) {
     return interaction.reply({
-      content: settingForOther
-        ? `${targetUserOpt.username} har redan ett registrerat ${svc.label}-${svc.accountWordSv}.`
-        : `Du har redan ett registrerat ${svc.label}-${svc.accountWordSv}. Ta bort det först.`,
+      content: "Det finns redan ett konto sparat. Ta bort det först.",
       ephemeral: true,
     });
   }
@@ -538,9 +514,7 @@ async function handleSet(interaction, svc, isAdmin) {
   await setAccount(svc.key, targetId, normalized);
 
   return interaction.reply({
-    content: settingForOther
-      ? `${targetLabel}s ${svc.label}-${svc.accountWordSv} har sparats: **${svc.display(normalized)}**`
-      : `Ditt ${svc.label}-${svc.accountWordSv} har sparats: **${svc.display(normalized)}**`,
+    content: `Sparat: **${svc.display(normalized)}**`,
     ephemeral: true,
   });
 }
@@ -574,7 +548,7 @@ async function handleRemove(interaction, svc) {
   }
 
   return sendConfirmPrompt(interaction, {
-    prompt: `Är du säker på att du vill ta bort **${target.username}**s ${svc.label}-${svc.accountWordSv} (\`${svc.display(existing)}\`)?`,
+    prompt: `Är du säker på att du vill ta bort **${target.username}**s ${svc.label}-${svc.accountWordSv}?`,
     customId: `remove:${svc.key}:${target.id}:${interaction.user.id}`,
   });
 }
@@ -589,19 +563,8 @@ async function handleList(interaction, svc) {
     });
   }
 
-  const lines = await Promise.all(
-    rows.map(async (row, i) => {
-      let name = `Användare ${row.user_id}`;
-
-      try {
-        const u = await client.users.fetch(row.user_id);
-        name = u.username;
-      } catch {}
-
-      const ts = Math.floor(new Date(row.updated_at).getTime() / 1000);
-
-      return `**${i + 1}.** ${name} — \`${svc.display(row.account)}\` · uppdaterad <t:${ts}:R>`;
-    })
+  const lines = rows.map(
+    (row, i) => `**${i + 1}.** <@${row.user_id}> — \`${svc.display(row.account)}\``
   );
 
   const logo = new AttachmentBuilder(svc.logoPath, { name: svc.logoName });
@@ -623,45 +586,20 @@ async function handleCryptoSwap(interaction, isAdmin) {
   if (cmd === "setcryptoswap") {
     const coinKey = interaction.options.getString("valuta", true);
     const address = interaction.options.getString("adress", true).trim();
-    const targetUserOpt = interaction.options.getUser("user");
-    const settingForOther = targetUserOpt && targetUserOpt.id !== userId;
-
-    if (settingForOther && !isAdmin) {
-      return interaction.reply({
-        content: "Endast administratörer kan spara kryptoadresser åt andra användare.",
-        ephemeral: true,
-      });
-    }
-
-    const targetId = settingForOther ? targetUserOpt.id : userId;
     const coin = CRYPTO_ASSETS[coinKey];
     const validated = CRYPTO_VALIDATORS[coinKey](address);
 
     if (!validated) {
       return interaction.reply({
-        content: `Ogiltig ${coin.label}-adress. Kontrollera formatet och försök igen.`,
+        content: `Ogiltig ${coin.label}-adress.`,
         ephemeral: true,
       });
     }
 
-    const serviceKey = cryptoServiceKey(coinKey);
-    const existing = await getAccount(serviceKey, targetId);
-
-    if (existing) {
-      return interaction.reply({
-        content: settingForOther
-          ? `${targetUserOpt.username} har redan en sparad ${coin.label}-adress.`
-          : `Du har redan en sparad ${coin.label}-adress. Ta bort den först.`,
-        ephemeral: true,
-      });
-    }
-
-    await setAccount(serviceKey, targetId, validated);
+    await setAccount(cryptoServiceKey(coinKey), userId, validated);
 
     return interaction.reply({
-      content: settingForOther
-        ? `${targetUserOpt.username}s ${coin.label}-adress har sparats: \`${validated}\``
-        : `Din ${coin.label}-adress har sparats: \`${validated}\``,
+      content: `Din ${coin.label}-adress har sparats: \`${validated}\``,
       ephemeral: true,
     });
   }
@@ -675,10 +613,7 @@ async function handleCryptoSwap(interaction, isAdmin) {
 
     if (!address) {
       return interaction.reply({
-        content:
-          target.id === interaction.user.id
-            ? `Du har ingen sparad ${coin.label}-adress.`
-            : `${target.username} har ingen sparad ${coin.label}-adress.`,
+        content: `${target.username} har ingen sparad ${coin.label}-adress.`,
         ephemeral: true,
       });
     }
@@ -689,82 +624,44 @@ async function handleCryptoSwap(interaction, isAdmin) {
     const qrFile = new AttachmentBuilder(qrBuffer, { name: `${coinKey}-qr.png` });
     const logo = new AttachmentBuilder(coin.logoPath, { name: coin.logoName });
 
-    const fields = [
-      { name: "Valuta", value: `${coin.label} (${coin.symbol})`, inline: true },
-      { name: "Adress", value: `\`${address}\``, inline: false },
-    ];
-
-    if (amount != null) {
-      const fmtCoin = (n) =>
-        `${n.toLocaleString("sv-SE", { maximumFractionDigits: 8 })} ${coin.symbol}`;
-
-      const feeAmount = amount * (FEE_PERCENT / 100);
-      const netAmount = amount - feeAmount;
-
-      fields.push({ name: "Mängd", value: fmtCoin(amount), inline: true });
-      fields.push({
-        name: `Avgift (${FEE_PERCENT}%)`,
-        value: fmtCoin(feeAmount),
-        inline: true,
-      });
-      fields.push({ name: "Du får", value: fmtCoin(netAmount), inline: true });
-    }
-
     const embed = new EmbedBuilder()
       .setColor(0xf7931a)
       .setTitle(`${coin.label} – ${target.username}`)
       .setDescription("Skanna QR-koden i din kryptoplånbok för att betala.")
-      .addFields(fields)
+      .addFields(
+        { name: "Valuta", value: `${coin.label} (${coin.symbol})`, inline: true },
+        { name: "Adress", value: `\`${address}\``, inline: false }
+      )
       .setThumbnail(`attachment://${coin.logoName}`)
-      .setImage(`attachment://${coinKey}-qr.png`)
-      .setFooter({
-        text: `Begärt av ${interaction.user.username}`,
-        iconURL: interaction.user.displayAvatarURL(),
-      });
+      .setImage(`attachment://${coinKey}-qr.png`);
 
     return interaction.editReply({ embeds: [embed], files: [logo, qrFile] });
   }
 
   if (cmd === "clearcryptoswap") {
     const coinKey = interaction.options.getString("valuta", true);
-    const coin = CRYPTO_ASSETS[coinKey];
-    const existing = await getAccount(cryptoServiceKey(coinKey), userId);
+    const removed = await clearAccount(cryptoServiceKey(coinKey), userId);
 
-    if (!existing) {
-      return interaction.reply({
-        content: `Du har ingen sparad ${coin.label}-adress att ta bort.`,
-        ephemeral: true,
-      });
-    }
-
-    return sendConfirmPrompt(interaction, {
-      prompt: `Är du säker på att du vill ta bort din sparade ${coin.label}-adress (\`${shortenAddress(existing)}\`)?`,
-      customId: `clear:${cryptoServiceKey(coinKey)}:${userId}:${interaction.user.id}`,
+    return interaction.reply({
+      content: removed ? "Krypto-adressen har tagits bort." : "Ingen adress hittades.",
+      ephemeral: true,
     });
   }
 
   if (cmd === "cryptoswapremove") {
     const target = interaction.options.getUser("user", true);
     const coinKey = interaction.options.getString("valuta", true);
-    const coin = CRYPTO_ASSETS[coinKey];
-    const existing = await getAccount(cryptoServiceKey(coinKey), target.id);
+    const removed = await clearAccount(cryptoServiceKey(coinKey), target.id);
 
-    if (!existing) {
-      return interaction.reply({
-        content: `${target.username} har ingen sparad ${coin.label}-adress.`,
-        ephemeral: true,
-      });
-    }
-
-    return sendConfirmPrompt(interaction, {
-      prompt: `Är du säker på att du vill ta bort **${target.username}**s ${coin.label}-adress (\`${shortenAddress(existing)}\`)?`,
-      customId: `remove:${cryptoServiceKey(coinKey)}:${target.id}:${interaction.user.id}`,
+    return interaction.reply({
+      content: removed ? "Krypto-adressen har tagits bort." : "Ingen adress hittades.",
+      ephemeral: true,
     });
   }
 
   if (cmd === "cryptoswaplist") {
     const r = await pool.query(
-      `SELECT user_id, service, account, updated_at FROM payment_accounts
+      `SELECT user_id, service, account FROM payment_accounts
        WHERE service LIKE 'crypto_%' ORDER BY user_id, service`
     );
 
@@ -784,8 +681,7 @@ async function handleCryptoSwap(interaction, isAdmin) {
     const embed = new EmbedBuilder()
       .setColor(0xf7931a)
       .setTitle("Registrerade kryptoadresser")
-      .setDescription(lines.join("\n").slice(0, 4000))
-      .setFooter({ text: `Totalt ${r.rows.length} adresser` });
+      .setDescription(lines.join("\n").slice(0, 4000));
 
     return interaction.reply({ embeds: [embed], ephemeral: true });
   }
@@ -839,74 +735,69 @@ async function handleCryptoCommand(interaction) {
     return interaction.editReply({ embeds: [embed] });
   } catch (err) {
     console.error("Crypto command failed:", err);
-
-    const msg = "Kunde inte hämta kryptopriser just nu. Försök igen senare.";
-
-    if (interaction.deferred) {
-      return interaction.editReply({ content: msg }).catch(() => {});
-    }
-
-    return interaction.reply({ content: msg, ephemeral: true }).catch(() => {});
+    return interaction.editReply({
+      content: "Kunde inte hämta kryptopriser just nu.",
+    });
   }
 }
 
 client.on("interactionCreate", async (interaction) => {
   try {
-    if (interaction.isButton() && interaction.customId === "create_swish_ticket") {
+    if (
+      interaction.isButton() &&
+      (interaction.customId === "create_ticket" ||
+        interaction.customId === "create_paypal_ticket")
+    ) {
+      const isPaypal = interaction.customId === "create_paypal_ticket";
+
       const modal = new ModalBuilder()
-        .setCustomId("swish_ticket_form")
-        .setTitle("Swish Exchange • Ny ticket");
-
-      const nameInput = new TextInputBuilder()
-        .setCustomId("full_name")
-        .setLabel("Fullständigt namn")
-        .setPlaceholder("Exempel: Arvid Andersson")
-        .setStyle(TextInputStyle.Short)
-        .setMinLength(2)
-        .setMaxLength(50)
-        .setRequired(true);
-
-      const phoneInput = new TextInputBuilder()
-        .setCustomId("phone_number")
-        .setLabel("Swish-nummer")
-        .setPlaceholder("Exempel: 0701234567")
-        .setStyle(TextInputStyle.Short)
-        .setMinLength(8)
-        .setMaxLength(15)
-        .setRequired(true);
-
-      const amountInput = new TextInputBuilder()
-        .setCustomId("amount")
-        .setLabel("Belopp att lägga in")
-        .setPlaceholder("Exempel: 500 SEK")
-        .setStyle(TextInputStyle.Short)
-        .setMinLength(1)
-        .setMaxLength(20)
-        .setRequired(true);
+        .setCustomId(isPaypal ? "paypal_ticket_form" : "ticket_form")
+        .setTitle(isPaypal ? "PayPal Ticket" : "Swish Ticket");
 
       modal.addComponents(
-        new ActionRowBuilder().addComponents(nameInput),
-        new ActionRowBuilder().addComponents(phoneInput),
-        new ActionRowBuilder().addComponents(amountInput)
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId("name")
+            .setLabel("Namn")
+            .setPlaceholder("Exempel: Arvid Andersson")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+        ),
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId(isPaypal ? "paypal_link" : "phone")
+            .setLabel(isPaypal ? "PayPal-länk" : "Telefonnummer")
+            .setPlaceholder(isPaypal ? "Exempel: paypal.me/namn" : "Exempel: 0701234567")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+        ),
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId("amount")
+            .setLabel("Belopp")
+            .setPlaceholder(isPaypal ? "Exempel: 50 USD" : "Exempel: 500 SEK")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+        )
       );
 
       return interaction.showModal(modal);
     }
 
-    if (interaction.isModalSubmit() && interaction.customId === "swish_ticket_form") {
+    if (
+      interaction.isModalSubmit() &&
+      (interaction.customId === "ticket_form" ||
+        interaction.customId === "paypal_ticket_form")
+    ) {
       await interaction.deferReply({ ephemeral: true });
 
-      const fullName = interaction.fields.getTextInputValue("full_name");
-      const phoneNumber = interaction.fields.getTextInputValue("phone_number");
+      const isPaypal = interaction.customId === "paypal_ticket_form";
+      const name = interaction.fields.getTextInputValue("name");
       const amount = interaction.fields.getTextInputValue("amount");
 
-      const cleanedPhone = phoneNumber.replace(/[\s\-()]/g, "");
-
-      if (!/^(\+467|07)\d{8}$/.test(cleanedPhone)) {
-        return interaction.editReply({
-          content: "❌ Ange ett giltigt svenskt Swish-nummer, t.ex. `0701234567`.",
-        });
-      }
+      const paymentInfo = isPaypal
+        ? interaction.fields.getTextInputValue("paypal_link")
+        : interaction.fields.getTextInputValue("phone");
 
       const safeUsername = interaction.user.username
         .toLowerCase()
@@ -914,9 +805,9 @@ client.on("interactionCreate", async (interaction) => {
         .slice(0, 20);
 
       const channel = await interaction.guild.channels.create({
-        name: `swish-${safeUsername || interaction.user.id}`,
+        name: `${isPaypal ? "paypal" : "swish"}-${safeUsername || interaction.user.id}`,
         type: ChannelType.GuildText,
-        topic: `Swish ticket skapad av ${interaction.user.id}`,
+        topic: `owner:${interaction.user.id}`,
         permissionOverwrites: [
           {
             id: interaction.guild.id,
@@ -942,16 +833,23 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       const embed = new EmbedBuilder()
-        .setColor(SWISH_PINK)
-        .setTitle("📩 Ny Swish Ticket")
-        .setDescription("En ny Swish-förfrågan har skickats in.")
-        .addFields(
-          { name: "👤 Discord", value: `<@${interaction.user.id}>`, inline: false },
-          { name: "🪪 Fullständigt namn", value: fullName, inline: true },
-          { name: "📱 Swish-nummer", value: cleanedPhone, inline: true },
-          { name: "💰 Belopp", value: amount, inline: true }
+        .setColor(isPaypal ? PAYPAL_BLUE : SWISH_PINK)
+        .setTitle(isPaypal ? "📩 Ny PayPal Ticket" : "📩 Ny Swish Ticket")
+        .setDescription(
+          isPaypal
+            ? "En ny PayPal-förfrågan har skickats in."
+            : "En ny Swish-förfrågan har skickats in."
         )
-        .setFooter({ text: `User ID: ${interaction.user.id}` })
+        .addFields(
+          { name: "👤 Kund", value: `<@${interaction.user.id}>`, inline: false },
+          { name: "Namn", value: name, inline: true },
+          {
+            name: isPaypal ? "PayPal-länk" : "Telefonnummer",
+            value: paymentInfo,
+            inline: true,
+          },
+          { name: "Belopp", value: amount, inline: true }
+        )
         .setTimestamp();
 
       await channel.send({
@@ -964,80 +862,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       return interaction.editReply({
-        content: `✅ Din Swish-ticket har skapats: ${channel}`,
-      });
-    }
-      const fullName = interaction.fields.getTextInputValue("full_name");
-      const phoneNumber = interaction.fields.getTextInputValue("phone_number");
-      const amount = interaction.fields.getTextInputValue("amount");
-
-      const cleanedPhone = phoneNumber.replace(/[\s\-()]/g, "");
-
-      if (!/^(\+467|07)\d{8}$/.test(cleanedPhone)) {
-        return interaction.reply({
-          content: "❌ Ange ett giltigt svenskt Swish-nummer, t.ex. `0701234567`.",
-          ephemeral: true,
-        });
-      }
-
-      const safeUsername = interaction.user.username
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "")
-        .slice(0, 20);
-
-      const channel = await interaction.guild.channels.create({
-        name: `swish-${safeUsername || interaction.user.id}`,
-        type: ChannelType.GuildText,
-        topic: `Swish ticket skapad av ${interaction.user.id}`,
-        permissionOverwrites: [
-          {
-            id: interaction.guild.id,
-            deny: [PermissionFlagsBits.ViewChannel],
-          },
-          {
-            id: interaction.user.id,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.ReadMessageHistory,
-            ],
-          },
-          {
-            id: REQUIRED_ROLE_ID,
-            allow: [
-              PermissionFlagsBits.ViewChannel,
-              PermissionFlagsBits.SendMessages,
-              PermissionFlagsBits.ReadMessageHistory,
-            ],
-          },
-        ],
-      });
-
-      const embed = new EmbedBuilder()
-        .setColor(SWISH_PINK)
-        .setTitle("📩 Ny Swish Ticket")
-        .setDescription("En ny Swish-förfrågan har skickats in.")
-        .addFields(
-          { name: "👤 Discord", value: `<@${interaction.user.id}>`, inline: false },
-          { name: "🪪 Fullständigt namn", value: fullName, inline: true },
-          { name: "📱 Swish-nummer", value: cleanedPhone, inline: true },
-          { name: "💰 Belopp", value: amount, inline: true }
-        )
-        .setFooter({ text: `User ID: ${interaction.user.id}` })
-        .setTimestamp();
-
-      await channel.send({
-        content: `<@&${REQUIRED_ROLE_ID}> <@${interaction.user.id}>`,
-        embeds: [embed],
-        allowedMentions: {
-          roles: [REQUIRED_ROLE_ID],
-          users: [interaction.user.id],
-        },
-      });
-
-      return interaction.reply({
-        content: `✅ Din Swish-ticket har skapats: ${channel}`,
-        ephemeral: true,
+        content: `✅ Din ${isPaypal ? "PayPal" : "Swish"}-ticket har skapats: ${channel}`,
       });
     }
 
@@ -1073,7 +898,9 @@ client.on("interactionCreate", async (interaction) => {
         );
 
         return interaction.update({
-          content: `Historiken har raderats (${res.rowCount} affär${res.rowCount === 1 ? "" : "er"}).`,
+          content: `Historiken har raderats (${res.rowCount} affär${
+            res.rowCount === 1 ? "" : "er"
+          }).`,
           components: [],
         });
       }
@@ -1099,9 +926,7 @@ client.on("interactionCreate", async (interaction) => {
       const removed = await clearAccount(serviceKey, targetId);
 
       return interaction.update({
-        content: removed
-          ? "Kontot har tagits bort."
-          : "Inget konto hittades att ta bort.",
+        content: removed ? "Kontot har tagits bort." : "Inget konto hittades att ta bort.",
         components: [],
       });
     }
@@ -1127,19 +952,44 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
-    if (interaction.commandName === "swishticket") {
+    if (
+      interaction.commandName === "setupswishticket" ||
+      interaction.commandName === "swishticket"
+    ) {
       const embed = new EmbedBuilder()
         .setColor(SWISH_PINK)
-        .setTitle("💸 Swish Exchange")
+        .setTitle("💸 Swish Ticket")
         .setDescription(
-          "Klicka på knappen nedan för att skapa en Swish-ticket.\n\nDu kommer få fylla i:\n• Fullständigt namn\n• Swish-nummer\n• Belopp"
+          "Klicka på knappen nedan för att skapa en Swish-ticket.\n\nDu kommer få fylla i:\n• Namn\n• Telefonnummer\n• Belopp"
         )
         .setFooter({ text: "Nordic Swap — Built on trust." });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId("create_swish_ticket")
+          .setCustomId("create_ticket")
           .setLabel("Skapa Swish Ticket")
+          .setStyle(ButtonStyle.Primary)
+      );
+
+      return interaction.reply({
+        embeds: [embed],
+        components: [row],
+      });
+    }
+
+    if (interaction.commandName === "setuppaypalticket") {
+      const embed = new EmbedBuilder()
+        .setColor(PAYPAL_BLUE)
+        .setTitle("💙 PayPal Ticket")
+        .setDescription(
+          "Klicka på knappen nedan för att skapa en PayPal-ticket.\n\nDu kommer få fylla i:\n• Namn\n• PayPal-länk\n• Belopp"
+        )
+        .setFooter({ text: "Nordic Swap — Built on trust." });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("create_paypal_ticket")
+          .setLabel("Skapa PayPal Ticket")
           .setStyle(ButtonStyle.Primary)
       );
 
@@ -1175,22 +1025,12 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      try {
-        await closer.send(
-          `✅ **Ticket complete**\n\nDu stängde ticketen: **#${channel.name}**`
-        );
-      } catch {
-        console.log("Kunde inte skicka DM till personen som stängde ticketen.");
-      }
-
       if (opener) {
         try {
           await opener.send(
-            `✅ **Ticket complete**\n\nDin ticket **#${channel.name}** har blivit färdig och stängd.\nStängd av: **${closer.username}**`
+            `✅ Din ticket **#${channel.name}** har blivit färdig och stängd.\nStängd av: **${closer.username}**`
           );
-        } catch {
-          console.log("Kunde inte skicka DM till personen som öppnade ticketen.");
-        }
+        } catch {}
       }
 
       setTimeout(async () => {
@@ -1221,59 +1061,17 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     if (interaction.commandName === "donecrypto") {
-      const coinKey = interaction.options.getString("valuta", true);
-      const coin = CRYPTO_ASSETS[coinKey];
-      const amount = interaction.options.getNumber("mängd");
-      const customer = interaction.options.getUser("kund");
-      const note = interaction.options.getString("notering");
-
-      const fields = [
-        { name: "Valuta", value: `${coin.label} (${coin.symbol})`, inline: true },
-        { name: "Växlare", value: `<@${interaction.user.id}>`, inline: true },
-      ];
-
-      if (amount != null) {
-        fields.push({
-          name: "Mängd",
-          value: `${amount.toLocaleString("sv-SE", {
-            maximumFractionDigits: 8,
-          })} ${coin.symbol}`,
-          inline: true,
-        });
-      }
-
-      if (customer) {
-        fields.push({ name: "Kund", value: `<@${customer.id}>`, inline: true });
-      }
-
-      if (note) {
-        fields.push({ name: "Notering", value: note, inline: false });
-      }
-
-      const logo = new AttachmentBuilder(coin.logoPath, { name: coin.logoName });
-
-      const embed = new EmbedBuilder()
-        .setColor(0x2ecc71)
-        .setTitle(`${coin.label} skickad`)
-        .setDescription("Krypto har skickats till kunden.")
-        .addFields(fields)
-        .setThumbnail(`attachment://${coin.logoName}`)
-        .setTimestamp(new Date());
-
       await logTrade({
-        service: cryptoServiceKey(coinKey),
+        service: "crypto",
         exchangerId: interaction.user.id,
-        customerId: customer?.id,
-        amount,
-        unit: coin.symbol,
-        note,
+        customerId: null,
+        amount: null,
+        unit: null,
+        note: "Crypto confirmed",
       });
 
       return interaction.reply({
-        content: customer ? `<@${customer.id}>` : undefined,
-        embeds: [embed],
-        files: [logo],
-        allowedMentions: customer ? { users: [customer.id] } : { parse: [] },
+        content: "✅ Crypto har bekräftats.",
       });
     }
 
@@ -1298,10 +1096,7 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       const lines = r.rows.map((row) => {
-        const ts = `<t:${Math.floor(
-          new Date(row.created_at).getTime() / 1000
-        )}:f>`;
-
+        const ts = `<t:${Math.floor(new Date(row.created_at).getTime() / 1000)}:f>`;
         const amountStr =
           row.amount != null
             ? `${Number(row.amount).toLocaleString("sv-SE", {
@@ -1339,7 +1134,9 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       return sendConfirmPrompt(interaction, {
-        prompt: `Är du säker på att du vill rensa **${target.username}**s historik? ${count} affär${count === 1 ? "" : "er"} kommer raderas permanent.`,
+        prompt: `Är du säker på att du vill rensa **${target.username}**s historik? ${count} affär${
+          count === 1 ? "" : "er"
+        } kommer raderas permanent.`,
         customId: `clearhistorik:${target.id}:${interaction.user.id}`,
       });
     }
@@ -1355,39 +1152,31 @@ client.on("interactionCreate", async (interaction) => {
       const customer = interaction.options.getUser("kund");
       const note = interaction.options.getString("notering");
 
-      const fields = [
-        { name: "Tjänst", value: svc.label, inline: true },
-        { name: "Växlare", value: `<@${interaction.user.id}>`, inline: true },
-      ];
-
-      if (amount != null) {
-        fields.push({
-          name: "Belopp",
-          value: `${amount.toLocaleString("sv-SE", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })} ${svc.amountSuffix}`,
-          inline: true,
-        });
-      }
-
-      if (customer) {
-        fields.push({ name: "Kund", value: `<@${customer.id}>`, inline: true });
-      }
-
-      if (note) {
-        fields.push({ name: "Notering", value: note, inline: false });
-      }
-
-      const logo = new AttachmentBuilder(svc.logoPath, { name: svc.logoName });
-
       const embed = new EmbedBuilder()
         .setColor(0x2ecc71)
         .setTitle(`${svc.label}-betalning genomförd`)
         .setDescription("Affären har bekräftats som klar.")
-        .addFields(fields)
-        .setThumbnail(`attachment://${svc.logoName}`)
+        .addFields(
+          { name: "Tjänst", value: svc.label, inline: true },
+          { name: "Växlare", value: `<@${interaction.user.id}>`, inline: true },
+          {
+            name: "Belopp",
+            value: `${amount.toLocaleString("sv-SE", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })} ${svc.amountSuffix}`,
+            inline: true,
+          }
+        )
         .setTimestamp(new Date());
+
+      if (customer) {
+        embed.addFields({ name: "Kund", value: `<@${customer.id}>`, inline: true });
+      }
+
+      if (note) {
+        embed.addFields({ name: "Notering", value: note, inline: false });
+      }
 
       await logTrade({
         service: svc.key,
@@ -1401,7 +1190,6 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply({
         content: customer ? `<@${customer.id}>` : undefined,
         embeds: [embed],
-        files: [logo],
         allowedMentions: customer ? { users: [customer.id] } : { parse: [] },
       });
     }
