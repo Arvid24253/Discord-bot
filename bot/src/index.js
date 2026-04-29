@@ -810,7 +810,10 @@ client.on("interactionCreate", async (interaction) => {
       const channel = await interaction.guild.channels.create({
         name: `${isPaypal ? "paypal" : "swish"}-${safeUsername || interaction.user.id}`,
         type: ChannelType.GuildText,
-        parent: TICKET_CATEGORY_ID,
+        parent:
+        interaction.guild.channels.cache.find(
+          (c) => c.name.toLowerCase() === "exchanges" && c.type === ChannelType.GuildCategory
+        )?.id,
         topic: `owner:${interaction.user.id}`,
         permissionOverwrites: [
           {
