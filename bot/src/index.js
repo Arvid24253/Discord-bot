@@ -759,7 +759,7 @@ client.on("interactionCreate", async (interaction) => {
           new TextInputBuilder()
             .setCustomId("name")
             .setLabel("Namn")
-            .setPlaceholder("Exempel: Arvid Andersson")
+            .setPlaceholder("Exempel: Nordic Swap")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         ),
