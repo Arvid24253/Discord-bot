@@ -48,6 +48,7 @@ const FEE_PERCENT = 8;
 
 const REQUIRED_ROLE_ID = "1498733035548311796";
 const ADMIN_ROLE_ID = "1498733035548311796";
+const TICKET_CATEGORY_ID = "1498733038878724187";
 
 if (!process.env.TOKEN) {
   console.error("Saknar TOKEN i miljövariabler.");
@@ -234,7 +235,9 @@ function paypalDisplay(account) {
 function paypalPayUrl(account, amount) {
   if (account.startsWith("@")) {
     const handle = account.slice(1);
-    return amount != null ? `https://paypal.me/${handle}/${amount}` : `https://paypal.me/${handle}`;
+    return amount != null
+      ? `https://paypal.me/${handle}/${amount}`
+      : `https://paypal.me/${handle}`;
   }
 
   return `mailto:${account}`;
@@ -333,7 +336,7 @@ const SERVICES = {
     showAmount: true,
     showMessage: false,
     qrInstruction: "Skanna QR-koden eller öppna länken för att betala.",
-    amountSuffix: "Sek",
+    amountSuffix: "SEK",
   },
 };
 
@@ -360,7 +363,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`Inloggad som ${client.user.tag}`);
 
   client.user.setPresence({
@@ -692,7 +695,7 @@ async function handleCryptoCommand(interaction) {
     await interaction.deferReply();
 
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=solana,ethereum,litecoin&vs_currencies=Sek,sek&include_24hr_change=true"
+      "https://api.coingecko.com/api/v3/simple/price?ids=solana,ethereum,litecoin&vs_currencies=usd,sek&include_24hr_change=true"
     );
 
     if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
@@ -714,13 +717,13 @@ async function handleCryptoCommand(interaction) {
 
     const fields = coins.map((c) => {
       const d = data[c.id] || {};
-      const change = d.Sek_24h_change;
+      const change = d.usd_24h_change;
       const changeText =
         change == null ? "–" : `${change >= 0 ? "▲" : "▼"} ${change.toFixed(2)}%`;
 
       return {
         name: `${c.name} (${c.symbol})`,
-        value: `${fmt(d.Sek ?? 0, "Sek")} • ${fmt(d.sek ?? 0, "SEK")}\n24h: ${changeText}`,
+        value: `${fmt(d.usd ?? 0, "USD")} • ${fmt(d.sek ?? 0, "SEK")}\n24h: ${changeText}`,
         inline: false,
       };
     });
@@ -775,7 +778,7 @@ client.on("interactionCreate", async (interaction) => {
           new TextInputBuilder()
             .setCustomId("amount")
             .setLabel("Belopp")
-            .setPlaceholder(isPaypal ? "Exempel: 500 Sek" : "Exempel: 500 SEK")
+            .setPlaceholder(isPaypal ? "Exempel: 500 SEK" : "Exempel: 500 SEK")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         )
@@ -807,6 +810,7 @@ client.on("interactionCreate", async (interaction) => {
       const channel = await interaction.guild.channels.create({
         name: `${isPaypal ? "paypal" : "swish"}-${safeUsername || interaction.user.id}`,
         type: ChannelType.GuildText,
+        parent: TICKET_CATEGORY_ID,
         topic: `owner:${interaction.user.id}`,
         permissionOverwrites: [
           {
@@ -933,14 +937,7 @@ client.on("interactionCreate", async (interaction) => {
 
     if (!interaction.isChatInputCommand()) return;
 
-    let member = null;
-
-    if (interaction.guild) {
-      member =
-        interaction.member && interaction.member.roles?.cache
-          ? interaction.member
-          : await interaction.guild.members.fetch(interaction.user.id);
-    }
+    const member = interaction.member;
 
     const hasRequiredRole = memberHasRole(member, REQUIRED_ROLE_ID);
     const isAdmin = memberHasRole(member, ADMIN_ROLE_ID);
