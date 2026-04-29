@@ -209,7 +209,7 @@ const commands = [
       .addNumberOption((opt) =>
         opt
           .setName("belopp")
-          .setDescription(name === "doneswish" ? "Belopp i SEK" : "Belopp i USD")
+          .setDescription(name === "doneswish" ? "Belopp i SEK" : "Belopp i Sek")
           .setMinValue(0)
           .setRequired(true)
       )

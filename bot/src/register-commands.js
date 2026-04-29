@@ -252,7 +252,7 @@ const commands = [
           .setDescription(
             name === "doneswish"
               ? "Belopp i SEK (valfritt)"
-              : "Belopp i USD (valfritt)"
+              : "Belopp i Sek (valfritt)"
           )
           .setMinValue(0)
           .setRequired(false)

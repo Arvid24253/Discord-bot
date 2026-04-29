@@ -333,7 +333,7 @@ const SERVICES = {
     showAmount: true,
     showMessage: false,
     qrInstruction: "Skanna QR-koden eller öppna länken för att betala.",
-    amountSuffix: "USD",
+    amountSuffix: "Sek",
   },
 };
 
@@ -692,7 +692,7 @@ async function handleCryptoCommand(interaction) {
     await interaction.deferReply();
 
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=solana,ethereum,litecoin&vs_currencies=usd,sek&include_24hr_change=true"
+      "https://api.coingecko.com/api/v3/simple/price?ids=solana,ethereum,litecoin&vs_currencies=Sek,sek&include_24hr_change=true"
     );
 
     if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
@@ -714,13 +714,13 @@ async function handleCryptoCommand(interaction) {
 
     const fields = coins.map((c) => {
       const d = data[c.id] || {};
-      const change = d.usd_24h_change;
+      const change = d.Sek_24h_change;
       const changeText =
         change == null ? "–" : `${change >= 0 ? "▲" : "▼"} ${change.toFixed(2)}%`;
 
       return {
         name: `${c.name} (${c.symbol})`,
-        value: `${fmt(d.usd ?? 0, "USD")} • ${fmt(d.sek ?? 0, "SEK")}\n24h: ${changeText}`,
+        value: `${fmt(d.Sek ?? 0, "Sek")} • ${fmt(d.sek ?? 0, "SEK")}\n24h: ${changeText}`,
         inline: false,
       };
     });
@@ -775,7 +775,7 @@ client.on("interactionCreate", async (interaction) => {
           new TextInputBuilder()
             .setCustomId("amount")
             .setLabel("Belopp")
-            .setPlaceholder(isPaypal ? "Exempel: 50 USD" : "Exempel: 500 SEK")
+            .setPlaceholder(isPaypal ? "Exempel: 500 Sek" : "Exempel: 500 SEK")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         )
