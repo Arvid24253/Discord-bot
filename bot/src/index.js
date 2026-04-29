@@ -9,6 +9,11 @@ const {
   ButtonBuilder,
   ButtonStyle,
   ActivityType,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ChannelType,
+  PermissionFlagsBits,
 } = require("discord.js");
 const { Pool } = require("pg");
 const QRCode = require("qrcode");
@@ -847,6 +852,195 @@ async function handleCryptoCommand(interaction) {
 
 client.on("interactionCreate", async (interaction) => {
   try {
+    if (interaction.isButton() && interaction.customId === "create_swish_ticket") {
+      const modal = new ModalBuilder()
+        .setCustomId("swish_ticket_form")
+        .setTitle("Swish Exchange • Ny ticket");
+
+      const nameInput = new TextInputBuilder()
+        .setCustomId("full_name")
+        .setLabel("Fullständigt namn")
+        .setPlaceholder("Exempel: Arvid Andersson")
+        .setStyle(TextInputStyle.Short)
+        .setMinLength(2)
+        .setMaxLength(50)
+        .setRequired(true);
+
+      const phoneInput = new TextInputBuilder()
+        .setCustomId("phone_number")
+        .setLabel("Swish-nummer")
+        .setPlaceholder("Exempel: 0701234567")
+        .setStyle(TextInputStyle.Short)
+        .setMinLength(8)
+        .setMaxLength(15)
+        .setRequired(true);
+
+      const amountInput = new TextInputBuilder()
+        .setCustomId("amount")
+        .setLabel("Belopp att lägga in")
+        .setPlaceholder("Exempel: 500 SEK")
+        .setStyle(TextInputStyle.Short)
+        .setMinLength(1)
+        .setMaxLength(20)
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(nameInput),
+        new ActionRowBuilder().addComponents(phoneInput),
+        new ActionRowBuilder().addComponents(amountInput)
+      );
+
+      return interaction.showModal(modal);
+    }
+
+    if (interaction.isModalSubmit() && interaction.customId === "swish_ticket_form") {
+      await interaction.deferReply({ ephemeral: true });
+
+      const fullName = interaction.fields.getTextInputValue("full_name");
+      const phoneNumber = interaction.fields.getTextInputValue("phone_number");
+      const amount = interaction.fields.getTextInputValue("amount");
+
+      const cleanedPhone = phoneNumber.replace(/[\s\-()]/g, "");
+
+      if (!/^(\+467|07)\d{8}$/.test(cleanedPhone)) {
+        return interaction.editReply({
+          content: "❌ Ange ett giltigt svenskt Swish-nummer, t.ex. `0701234567`.",
+        });
+      }
+
+      const safeUsername = interaction.user.username
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "")
+        .slice(0, 20);
+
+      const channel = await interaction.guild.channels.create({
+        name: `swish-${safeUsername || interaction.user.id}`,
+        type: ChannelType.GuildText,
+        topic: `Swish ticket skapad av ${interaction.user.id}`,
+        permissionOverwrites: [
+          {
+            id: interaction.guild.id,
+            deny: [PermissionFlagsBits.ViewChannel],
+          },
+          {
+            id: interaction.user.id,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+            ],
+          },
+          {
+            id: REQUIRED_ROLE_ID,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+            ],
+          },
+        ],
+      });
+
+      const embed = new EmbedBuilder()
+        .setColor(SWISH_PINK)
+        .setTitle("📩 Ny Swish Ticket")
+        .setDescription("En ny Swish-förfrågan har skickats in.")
+        .addFields(
+          { name: "👤 Discord", value: `<@${interaction.user.id}>`, inline: false },
+          { name: "🪪 Fullständigt namn", value: fullName, inline: true },
+          { name: "📱 Swish-nummer", value: cleanedPhone, inline: true },
+          { name: "💰 Belopp", value: amount, inline: true }
+        )
+        .setFooter({ text: `User ID: ${interaction.user.id}` })
+        .setTimestamp();
+
+      await channel.send({
+        content: `<@&${REQUIRED_ROLE_ID}> <@${interaction.user.id}>`,
+        embeds: [embed],
+        allowedMentions: {
+          roles: [REQUIRED_ROLE_ID],
+          users: [interaction.user.id],
+        },
+      });
+
+      return interaction.editReply({
+        content: `✅ Din Swish-ticket har skapats: ${channel}`,
+      });
+    }
+      const fullName = interaction.fields.getTextInputValue("full_name");
+      const phoneNumber = interaction.fields.getTextInputValue("phone_number");
+      const amount = interaction.fields.getTextInputValue("amount");
+
+      const cleanedPhone = phoneNumber.replace(/[\s\-()]/g, "");
+
+      if (!/^(\+467|07)\d{8}$/.test(cleanedPhone)) {
+        return interaction.reply({
+          content: "❌ Ange ett giltigt svenskt Swish-nummer, t.ex. `0701234567`.",
+          ephemeral: true,
+        });
+      }
+
+      const safeUsername = interaction.user.username
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "")
+        .slice(0, 20);
+
+      const channel = await interaction.guild.channels.create({
+        name: `swish-${safeUsername || interaction.user.id}`,
+        type: ChannelType.GuildText,
+        topic: `Swish ticket skapad av ${interaction.user.id}`,
+        permissionOverwrites: [
+          {
+            id: interaction.guild.id,
+            deny: [PermissionFlagsBits.ViewChannel],
+          },
+          {
+            id: interaction.user.id,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+            ],
+          },
+          {
+            id: REQUIRED_ROLE_ID,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+            ],
+          },
+        ],
+      });
+
+      const embed = new EmbedBuilder()
+        .setColor(SWISH_PINK)
+        .setTitle("📩 Ny Swish Ticket")
+        .setDescription("En ny Swish-förfrågan har skickats in.")
+        .addFields(
+          { name: "👤 Discord", value: `<@${interaction.user.id}>`, inline: false },
+          { name: "🪪 Fullständigt namn", value: fullName, inline: true },
+          { name: "📱 Swish-nummer", value: cleanedPhone, inline: true },
+          { name: "💰 Belopp", value: amount, inline: true }
+        )
+        .setFooter({ text: `User ID: ${interaction.user.id}` })
+        .setTimestamp();
+
+      await channel.send({
+        content: `<@&${REQUIRED_ROLE_ID}> <@${interaction.user.id}>`,
+        embeds: [embed],
+        allowedMentions: {
+          roles: [REQUIRED_ROLE_ID],
+          users: [interaction.user.id],
+        },
+      });
+
+      return interaction.reply({
+        content: `✅ Din Swish-ticket har skapats: ${channel}`,
+        ephemeral: true,
+      });
+    }
+
     if (interaction.isButton()) {
       const parts = interaction.customId.split(":");
       const action = parts[0];
@@ -930,6 +1124,28 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply({
         content: "Du har inte behörighet att använda detta kommando.",
         ephemeral: true,
+      });
+    }
+
+    if (interaction.commandName === "swishticket") {
+      const embed = new EmbedBuilder()
+        .setColor(SWISH_PINK)
+        .setTitle("💸 Swish Exchange")
+        .setDescription(
+          "Klicka på knappen nedan för att skapa en Swish-ticket.\n\nDu kommer få fylla i:\n• Fullständigt namn\n• Swish-nummer\n• Belopp"
+        )
+        .setFooter({ text: "Nordic Swap — Built on trust." });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("create_swish_ticket")
+          .setLabel("Skapa Swish Ticket")
+          .setStyle(ButtonStyle.Primary)
+      );
+
+      return interaction.reply({
+        embeds: [embed],
+        components: [row],
       });
     }
 

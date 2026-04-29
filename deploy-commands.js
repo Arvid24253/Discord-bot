@@ -91,6 +91,10 @@ const commands = [
   }),
 
   new SlashCommandBuilder()
+    .setName("swishticket")
+    .setDescription("Skicka panel för Swish tickets"),
+
+  new SlashCommandBuilder()
     .setName("crypto")
     .setDescription("Visa kryptopriser"),
 
@@ -169,8 +173,8 @@ const commands = [
     .setDescription("Bekräfta crypto"),
 
   new SlashCommandBuilder()
-  .setName("doneticket")
-  .setDescription("Stäng ticketen och meddela användarna"),
+    .setName("doneticket")
+    .setDescription("Stäng ticketen och meddela användarna"),
 
   new SlashCommandBuilder()
     .setName("historik")
@@ -198,9 +202,7 @@ const commands = [
         opt
           .setName("belopp")
           .setDescription(
-            name === "doneswish"
-              ? "Belopp i SEK"
-              : "Belopp i USD"
+            name === "doneswish" ? "Belopp i SEK" : "Belopp i USD"
           )
           .setMinValue(0)
           .setRequired(true)
