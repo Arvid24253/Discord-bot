@@ -48,6 +48,8 @@ const FEE_PERCENT = 8;
 
 const REQUIRED_ROLE_ID = "1498733035548311796";
 const ADMIN_ROLE_ID = "1498733035548311796";
+const MEMBER_ROLE_ID = "1498733035548311795";
+const WELCOME_CHANNEL_ID = "1498733038753026051";
 const TICKET_CATEGORY_ID = "1498733038878724187";
 
 if (!process.env.TOKEN) {
@@ -360,7 +362,10 @@ function cryptoServiceKey(coinKey) {
 }
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+  ],
 });
 
 client.once("clientReady", () => {
@@ -380,6 +385,71 @@ client.once("clientReady", () => {
 
 client.on("error", (err) => {
   console.error("Client error:", err);
+});
+
+client.on("guildMemberAdd", async (member) => {
+  try {
+    const role = member.guild.roles.cache.get(MEMBER_ROLE_ID);
+    if (role) {
+      await member.roles.add(role).catch(() => {});
+    }
+
+    const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+
+    const welcomeEmbed = new EmbedBuilder()
+      .setColor(0x2ecc71)
+      .setTitle("👋 Välkommen!")
+      .setDescription(
+        `Välkommen till **${member.guild.name}**, ${member}!\n\nDu har fått medlemsrollen. Läs reglerna och skapa en ticket om du behöver hjälp.`
+      )
+      .setThumbnail(member.user.displayAvatarURL())
+      .setTimestamp();
+
+    if (welcomeChannel) {
+      await welcomeChannel.send({
+        content: `👋 Välkommen ${member}!`,
+        embeds: [welcomeEmbed],
+      }).catch(() => {});
+    }
+
+    const dmEmbed = new EmbedBuilder()
+      .setColor(0x5865f2)
+      .setTitle(`Välkommen till ${member.guild.name}`)
+      .setDescription(
+        "Kul att du joinade!\n\nBehöver du hjälp kan du skapa en ticket i servern."
+      )
+      .setThumbnail(member.guild.iconURL())
+      .setTimestamp();
+
+    await member.send({ embeds: [dmEmbed] }).catch(() => {});
+  } catch (err) {
+    console.error("Welcome error:", err);
+  }
+});
+
+client.on("guildMemberUpdate", async (oldMember, newMember) => {
+  try {
+    if (!oldMember.premiumSince && newMember.premiumSince) {
+      const welcomeChannel = newMember.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+      if (!welcomeChannel) return;
+
+      const boostEmbed = new EmbedBuilder()
+        .setColor(0xf47fff)
+        .setTitle("🚀 Server Boost!")
+        .setDescription(
+          `Tack ${newMember} för att du boostade **${newMember.guild.name}**! 💜`
+        )
+        .setThumbnail(newMember.user.displayAvatarURL())
+        .setTimestamp();
+
+      await welcomeChannel.send({
+        content: `🚀 ${newMember} boostade servern!`,
+        embeds: [boostEmbed],
+      }).catch(() => {});
+    }
+  } catch (err) {
+    console.error("Boost error:", err);
+  }
 });
 
 async function sendConfirmPrompt(interaction, { prompt, customId }) {
@@ -778,7 +848,7 @@ client.on("interactionCreate", async (interaction) => {
           new TextInputBuilder()
             .setCustomId("amount")
             .setLabel("Belopp")
-            .setPlaceholder(isPaypal ? "Exempel: 500 SEK" : "Exempel: 500 SEK")
+            .setPlaceholder("Exempel: 500 SEK")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         )
@@ -807,13 +877,17 @@ client.on("interactionCreate", async (interaction) => {
         .replace(/[^a-z0-9]/g, "")
         .slice(0, 20);
 
+      const ticketCategory =
+        interaction.guild.channels.cache.find(
+          (c) =>
+            c.name.toLowerCase() === "exchanges" &&
+            c.type === ChannelType.GuildCategory
+        )?.id || TICKET_CATEGORY_ID;
+
       const channel = await interaction.guild.channels.create({
         name: `${isPaypal ? "paypal" : "swish"}-${safeUsername || interaction.user.id}`,
         type: ChannelType.GuildText,
-        parent:
-        interaction.guild.channels.cache.find(
-          (c) => c.name.toLowerCase() === "exchanges" && c.type === ChannelType.GuildCategory
-        )?.id,
+        parent: ticketCategory,
         topic: `owner:${interaction.user.id}`,
         permissionOverwrites: [
           {
@@ -1239,4 +1313,4 @@ ensureSchema()
   .catch((err) => {
     console.error("Schema setup failed:", err);
     process.exit(1);
-  });// force deploy Thu Apr 30 07:31:27 AM UTC 2026
+  });
