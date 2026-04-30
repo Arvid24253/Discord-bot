@@ -1239,4 +1239,4 @@ ensureSchema()
   .catch((err) => {
     console.error("Schema setup failed:", err);
     process.exit(1);
-  });
+  });// force deploy Thu Apr 30 07:31:27 AM UTC 2026
